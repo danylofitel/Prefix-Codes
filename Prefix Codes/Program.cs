@@ -33,6 +33,10 @@ namespace PrefixCodes
         /// <param name="frequencies">The frequencies.</param>
         private static void PrefixCode(char[] characters, double[] frequencies)
         {
+            Console.Write("Prefix codes for ");
+            Console.WriteLine(characters);
+            Console.WriteLine();
+
             Console.WriteLine("Shannon's code");
             ShannonCode shannon = new ShannonCode(characters, frequencies);
             foreach (var c in characters)
@@ -41,6 +45,7 @@ namespace PrefixCodes
             }
 
             Console.WriteLine();
+
             Console.WriteLine("Huffman's code");
             HuffmanCode huffman = new HuffmanCode(characters, frequencies);
             foreach (var c in characters)

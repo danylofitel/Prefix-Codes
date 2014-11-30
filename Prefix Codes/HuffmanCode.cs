@@ -204,6 +204,6 @@ namespace PrefixCodes
             {
                 return this.Weight < other.Weight ? -1 : this.Weight == other.Weight ? 0 : 1;
             }
-}
+        }
     }
 }

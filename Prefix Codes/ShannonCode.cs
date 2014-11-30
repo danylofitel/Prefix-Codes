@@ -26,6 +26,11 @@ namespace PrefixCodes
         private double[] frequencies;
 
         /// <summary>
+        /// The cumulative frequencies used by binary search during encoding
+        /// </summary>
+        private double[] cumulativeFrequencies;
+
+        /// <summary>
         /// The table of codes for each character
         /// </summary>
         private IDictionary<char, string> codes;
@@ -69,6 +74,7 @@ namespace PrefixCodes
             // Deep copies are required
             this.symbols = new char[symbols.Length];
             this.frequencies = new double[frequencies.Length];
+            this.cumulativeFrequencies = new double[frequencies.Length];
 
             Array.Copy(symbols, this.symbols, symbols.Length);
             Array.Copy(frequencies, this.frequencies, frequencies.Length);
@@ -76,10 +82,17 @@ namespace PrefixCodes
             // Sort characters by their frequencies in ascending order
             Array.Sort(this.frequencies, this.symbols);
 
+            // Fill array of cumulative frequencies
+            this.cumulativeFrequencies[0] = this.frequencies[0];
+            for (int i = 1; i < frequencies.Length; ++i)
+            {
+                this.cumulativeFrequencies[i] = this.cumulativeFrequencies[i - 1] + this.frequencies[i];
+            }
+
             this.codes = new Dictionary<char, string>();
 
             // Construct the codes using recursive procedure
-            this.BuildCodes(0, this.symbols.Length, 1.0, string.Empty);
+            this.BuildCodes(0, this.symbols.Length, string.Empty);
         }
 
         /// <summary>
@@ -103,9 +116,8 @@ namespace PrefixCodes
         /// </summary>
         /// <param name="left">Inclusive left substring bound.</param>
         /// <param name="right">Exclusive right substring bound.</param>
-        /// <param name="freq">Sum of frequencies of characters in current substring.</param>
         /// <param name="path">Code corresponding to the path to current substring.</param>
-        private void BuildCodes(int left, int right, double freq, string path)
+        private void BuildCodes(int left, int right, string path)
         {
             if (left + 1 == right)
             {
@@ -114,26 +126,33 @@ namespace PrefixCodes
             }
             else
             {
-                // Separation between two substrings with equal frequency sums
-                // Start with only the first character on the left side
-                int half = left;
-                double halfFreq = this.frequencies[left];
+                // Sum of frequencies of symbols before the leftmost one, i.e. extra weight
+                double extraFreq = this.cumulativeFrequencies[left] - this.frequencies[left];
 
-                // Continue growth of the left side only if there are more than 2 characters in current substring
-                if (right - left > 2)
+                // Exactly half of frequency sum of elements in current substring
+                double halfFreq = 0.5 * (this.cumulativeFrequencies[right - 1] - extraFreq);
+
+                // Find the median using binary search
+                int l = left;
+                int r = right - 1;
+                while (l != r)
                 {
-                    // Find a partition that is as to equal as possible
-                    while (half + 1 < right - 1
-                        && Math.Abs((0.5 * freq) - halfFreq) > Math.Abs((0.5 * freq) - halfFreq - this.frequencies[half + 1]))
+                    int mid = (l + r) / 2;
+
+                    // Find the direction with better approximation of median and cut off the other direction
+                    if (mid + 1 <= r && Math.Abs(halfFreq - this.cumulativeFrequencies[mid] + extraFreq) > Math.Abs(halfFreq - this.cumulativeFrequencies[mid + 1] + extraFreq))
                     {
-                        ++half;
-                        halfFreq += this.frequencies[half];
+                        l = mid + 1;
+                    }
+                    else
+                    {
+                        r = r == mid ? mid - 1 : mid;
                     }
                 }
 
                 // Recursively traverse left and right substrings
-                this.BuildCodes(left, half + 1, halfFreq, path + "0");
-                this.BuildCodes(half + 1, right, freq - halfFreq, path + "1");
+                this.BuildCodes(left, l + 1, path + "0");
+                this.BuildCodes(l + 1, right, path + "1");
             }
         }
     }
